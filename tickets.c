@@ -1,6 +1,7 @@
 // tickets.c
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -43,10 +44,10 @@ void sell(void)
 {
   while (stock > 0)
   {
+    p(thread_sig, 0);
     stock--;
     printf("Stock: %d\n", stock);
-    v(thread_sig, 0);
-    p(thread_sig, 0);
+    v(thread_sig, 1);
   }
 }
 
@@ -54,10 +55,11 @@ void buy(void)
 {
   while (sold < STOCKCOUNT)
   {
-    p(thread_sig, 0);
+    p(thread_sig, 1);
     sold++;
     printf("%d sold, %d left.\n", sold, stock);
     v(thread_sig, 0);
+    sleep(1);
   }
 }
 
@@ -69,9 +71,11 @@ int main(void)
   stock = STOCKCOUNT;
   sold = 0;
 
-  thread_sig = semget(IPC_PRIVATE, 1, IPC_CREAT | 0666);
-  arg.val = 0;
+  thread_sig = semget(IPC_PRIVATE, 2, IPC_CREAT | 0666);
+  arg.val = 1;
   semctl(thread_sig, 0, SETVAL, arg);
+  arg.val = 0;
+  semctl(thread_sig, 1, SETVAL, arg);
 
   thread1 = pthread_create(&tid1, NULL, (void *) sell, NULL);
   thread2 = pthread_create(&tid2, NULL, (void *) buy, NULL);
